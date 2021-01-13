@@ -1,59 +1,175 @@
 var express = require('express');
 var router = express.Router();
-var fs = require('fs');
+var axios = require("axios");
+var mongo = require('mongodb');
+var MongoClient = mongo.MongoClient;
+var jwt = require('jsonwebtoken');
+var bcrypt = require('bcryptjs');
+const { checkUserExist } = require('../services/Operations');
+
+var url = "mongodb://localhost:27017/";
+
+const moviesArray = ["Tenet", "Ad Astra", "Escape Room", "My Spy", "Venom", "Joker", "Avengers", "Aladdin", "Iron Man", "Rush Hour", "Transformers", "Black Panther"];
 
 /* GET home page. */
-router.get('/', function(req, res, next) {
-  res.json({ test: "express"})
-  
+router.get('/', function (req, res, next) {
+  res.json({ test: "express" })
+
 });
 
+router.post('/signup', function (req, res, next) {
 
-//  C R (done) U (done)D 
-router.get('/readfile', function(req, res, next) {
+  const data = req.body;
 
-  console.log(req)
-  const fileContent = fs.readFileSync('/home/divya/workspace/stuff/nodejs/express_filecrud/test.txt',{encoding : 'utf8', flag:'r'});
-  res.json({ filecontent: fileContent})
-});
+  const callback = (result) => {
+    if (result === 0) {
+      try {
+        MongoClient.connect(url,
+          { useUnifiedTopology: true },
+          function (err, db) {
+            if (err) throw err;
+            var dbo = db.db("moviemania");
+            var myobj = { name: data.name, email: data.email, pass: bcrypt.hashSync(data.pass, 8) };
+            dbo.collection("users").insertOne(myobj, function (err, res) {
+              if (err) throw err;
+              res.status(200).send({ Code: 200, message: "user registered!" });
+              db.close();
+            })
+          }
+        )
+      } catch (error) {
+        console.log(error)
+      }
+    } else {
+      res.status(403).send({ Code: 403, message: "user exist!" });
+    }
+  };
 
+  checkUserExist(data.email, callback);
 
+})
 
+router.post('/login', function (req, res, next) {
 
+  const data = req.body;
+  const hashedPassword = bcrypt.hashSync(data.pass, 8);
 
-router.post('/update', function(req, res, next) {
+  try {
+    MongoClient.connect(url,
+      { useUnifiedTopology: true },
+      function (err, db) {
+        if (err) throw err;
+        var dbo = db.db("moviemania");
+        dbo.collection("users").findOne({ email: data.email }, function (err, result) {
+          if (err) throw err;
 
-  console.log(req)
-  try{
-    fs.appendFileSync('/home/divya/workspace/stuff/nodejs/express_filecrud/test.txt', req.body.data.vb.dfg.g, {encoding : 'utf8', flag:'a'});
-    res.json({ filecontent: "file read suss=cfuly"})
-  } catch(err){
-    res.status(500)
-    res.json({ filecontent: "file read unsuccefukt"})
+          else {
+            try {
+              if (result.email === req.body.email && bcrypt.compare(hashedPassword)) {
+
+                // create a token
+                var token = jwt.sign({ id: req.body.email }, "Shopping", {
+                  expiresIn: 3600 * 1000 // expires in 1 Hour
+                });
+                res.status(200).send({ Code: 200, auth: true, AuthToken: token, success: true, maxAge: 3600 * 1000, name: result.name, email : result.email });
+              } else {
+                res.status(401).send({ Code: 401, message: "Credentials Incorrect!" });
+              }
+            } catch (error) {
+              res.status(401).send({ Code: 401, message: "Credentials Incorrect!" });
+            }
+
+          }
+
+          db.close();
+        })
+      }
+    )
+  } catch (error) {
+    console.log(error)
+  }
+
+})
+
+router.post('/logout', function (req, res, next) {
+
+  const token = req.body.token;
+  const email = req.body.email;
+
+  console.log(req.body)
+
+  try {
+    var verificationJWT = jwt.verify(token, "Shopping");
+
+    console.log(verificationJWT)
+
+    if (email === verificationJWT.id) {
+      // jwt.destroy(verificationJWT.id);
+      res.clearCookie('AuthToken');
+      res.status(200).send({ auth: false, success: true });
+    } else {
+      res.status(401).send({ auth: false, success: false });
+    }
+
+  } catch (error) {
+    console.log(error)
+    res.status(401).send({ auth: false, success: false });
+  }
+
+})
+
+router.get('/movies', function (req, res, next) {
+
+  let data = [];
+
+  try {
+
+    moviesArray.map((elm, index) => {
+
+      // console.log(elm)
+
+      var options = {
+        method: 'GET',
+        url: 'https://imdb-internet-movie-database-unofficial.p.rapidapi.com/film/' + elm,
+        headers: {
+          'x-rapidapi-key': 'a9b9008ecamsh4f57ed9fb0f5366p1b23a5jsnc6b35266c1e0',
+          'x-rapidapi-host': 'imdb-internet-movie-database-unofficial.p.rapidapi.com'
+        }
+      };
+
+      axios.request(options)
+        .then(function (response) {
+          // console.log({title : response.data.title}, index);
+          // data.push({title : response.data.title});
+
+          data.push({
+            title: response.data.title,
+            year: response.data.year,
+            poster: response.data.poster,
+            desc: response.data.plot,
+            trailer: response.data.trailer.link
+          });
+
+          if (index === 11) {
+            res.json(data);
+          }
+
+        }).catch(function (error) {
+          console.error(error);
+        });
+
+    })
+
+    // //sending back data to frontend
+    // return new Promise((resolve) => {
+    //   setTimeout(() => resolve(), 12000);
+
+    // })
+
+  } catch (error) {
+    console.error(error);
   }
 
 });
-
-
-router.post('/create', function(req, res, next) {
-
-  var createStream = fs.createWriteStream(`/home/divya/workspace/stuff/nodejs/express_filecrud/${req.query.params}.txt`);
-  createStream.end(); 
-  res.json({ filecontent: "file created succfuly"})
-});
-
-
-
-
-
-router.delete('/delete', function(req, res, next) {
-
-  fs.unlink(`/home/divya/workspace/stuff/nodejs/express_filecrud/${req.query.params}.txt`, (err) => {
-    if (err) throw err;
-    res.json({ filecontent: 'path/file.txt was deleted'})
-
-  });
-});
-
 
 module.exports = router;
