@@ -29,4 +29,31 @@ const checkUserExist = (email, callback) => {
 
 }
 
+const getUserDetails = (email, callback) => {
+
+    try {
+        MongoClient.connect(url,
+            { useUnifiedTopology: true },
+            function (err, db) {
+                if (err) throw err;
+                var dbo = db.db("moviemania");
+                dbo.collection("users").findOne({email : email}, { projection: { _id: 0 } }, function (err, result) {
+                        if (err) throw err;
+                        // res.json(result);
+                        else{
+                            callback(result)
+                        }
+                        db.close();
+                        // console.log(result)
+                        // return result;
+                    })
+            }
+        )
+    } catch (error) {
+        console.log(error)
+    }
+
+}
+
 exports.checkUserExist = checkUserExist;
+exports.getUserDetails = getUserDetails;
