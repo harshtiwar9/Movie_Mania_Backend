@@ -7,6 +7,7 @@ var MongoClient = mongo.MongoClient;
 var jwt = require('jsonwebtoken');
 var bcrypt = require('bcryptjs');
 const { checkUserExist, getUserDetails } = require('../services/Operations');
+require('dotenv').config();
 
 var url = "mongodb://localhost:27017/";
 const moviesArray = ["Tenet", "Ad Astra", "Escape Room", "My Spy", "Venom", "Joker", "Avengers", "Aladdin", "Iron Man", "Rush Hour", "Transformers", "Black Panther"];
@@ -68,7 +69,7 @@ router.post('/login', function (req, res, next) {
               if (result.email === req.body.email && bcrypt.compare(hashedPassword)) {
 
                 // create a token
-                var token = jwt.sign({ id: req.body.email }, "Shopping", {
+                var token = jwt.sign({ id: req.body.email }, process.env.SECRET_JWT_KEY, {
                   expiresIn: 3600 * 1000 // expires in 1 Hour
                 });
                 res.status(200).send({ Code: 200, auth: true, AuthToken: token, success: true, maxAge: 3600 * 1000, name: result.name, email: result.email });
@@ -99,7 +100,7 @@ router.post('/logout', function (req, res, next) {
   console.log(req.body)
 
   try {
-    var verificationJWT = jwt.verify(token, "Shopping");
+    var verificationJWT = jwt.verify(token, process.env.SECRET_JWT_KEY);
 
     console.log(verificationJWT)
 
@@ -142,8 +143,9 @@ router.get('/movies', function (req, res, next) {
         method: 'GET',
         url: 'https://imdb-internet-movie-database-unofficial.p.rapidapi.com/film/' + elm,
         headers: {
-          'x-rapidapi-key': 'a9b9008ecamsh4f57ed9fb0f5366p1b23a5jsnc6b35266c1e0',
-          'x-rapidapi-host': 'imdb-internet-movie-database-unofficial.p.rapidapi.com'
+          
+          'x-rapidapi-key': process.env.SECRET_API_KEY,
+          'x-rapidapi-host': process.env.SECRET_HOST
         }
       };
 
@@ -197,7 +199,7 @@ router.post('/book', function (req, res, next) {
 
 
   try {
-    var verificationJWT = jwt.verify(token, "Shopping");
+    var verificationJWT = jwt.verify(token, process.env.SECRET_JWT_KEY);
 
     //user verification to enter data
     if (email === verificationJWT.id) {
