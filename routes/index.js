@@ -97,8 +97,6 @@ router.post('/logout', function (req, res, next) {
   const token = req.body.token;
   const email = req.body.email;
 
-  console.log(req.body)
-
   try {
     var verificationJWT = jwt.verify(token, process.env.SECRET_JWT_KEY);
 
@@ -151,9 +149,8 @@ router.get('/movies', function (req, res, next) {
 
       axios.request(options)
         .then(function (response) {
-          // console.log("Index:"+index)
-          console.log({ title: response.data.title }, index);
-          // data.push({title : response.data.title});
+          
+          // console.log({ title: response.data.title }, index);
 
           data.push({
             title: response.data.title,
@@ -164,7 +161,6 @@ router.get('/movies', function (req, res, next) {
           });
 
           if (index === 11) {
-            console.log(data.length)
             res.json(data);
           }
 
@@ -175,12 +171,6 @@ router.get('/movies', function (req, res, next) {
         });
 
     })
-
-    // //sending back data to frontend
-    // return new Promise((resolve) => {
-    //   setTimeout(() => resolve(), 12000);
-
-    // })
 
   } catch (error) {
     console.error(error);

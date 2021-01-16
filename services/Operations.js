@@ -13,13 +13,10 @@ const checkUserExist = (email, callback) => {
                 dbo.collection("users").find({email : email}, { projection: { _id: 0 } })
                     .count(function (err, result) {
                         if (err) throw err;
-                        // res.json(result);
                         else{
                             callback(result)
                         }
                         db.close();
-                        // console.log(result)
-                        // return result;
                     })
             }
         )
@@ -39,13 +36,10 @@ const getUserDetails = (email, callback) => {
                 var dbo = db.db("moviemania");
                 dbo.collection("users").findOne({email : email}, { projection: { _id: 0 } }, function (err, result) {
                         if (err) throw err;
-                        // res.json(result);
                         else{
                             callback(result)
                         }
                         db.close();
-                        // console.log(result)
-                        // return result;
                     })
             }
         )
