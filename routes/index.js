@@ -31,7 +31,7 @@ router.post('/signup', function (req, res, next) {
             if (err) throw err;
             var dbo = db.db("moviemania");
             var myobj = { name: data.name, email: data.email, pass: bcrypt.hashSync(data.pass, 8) };
-            dbo.collection("users").insertOne(myobj, function (err, res) {
+            dbo.collection("users").insertOne(myobj, function (err, result) {
               if (err) throw err;
               res.status(200).send({ Code: 200, message: "user registered!" });
               db.close();
@@ -143,7 +143,7 @@ router.get('/movies', function (req, res, next) {
         method: 'GET',
         url: 'https://imdb-internet-movie-database-unofficial.p.rapidapi.com/film/' + elm,
         headers: {
-          
+
           'x-rapidapi-key': process.env.SECRET_API_KEY,
           'x-rapidapi-host': process.env.SECRET_HOST
         }
@@ -218,7 +218,7 @@ router.post('/book', function (req, res, next) {
                 if (process.insertedCount > 0) {
                   res.status(200).send({ Code: 200, message: "Booking Completed!" });
                   db.close();
-                }else{
+                } else {
                   res.status(500).send({ Code: 500, message: "Internal Server Error!" });
                   db.close();
                 }
@@ -239,6 +239,33 @@ router.post('/book', function (req, res, next) {
   } catch (error) {
     console.log(error)
     res.status(401).send({ auth: false, success: false });
+  }
+
+})
+
+router.post('/history', function (req, res, next) {
+
+  const email = req.body.email;
+
+  try {
+    MongoClient.connect(url,
+      { useUnifiedTopology: true },
+      function (err, db) {
+        if (err) throw err;
+        var dbo = db.db("moviemania");
+        dbo.collection("bookings").find({ email: email }, { projection: { _id: 0 } })
+          .toArray(function (err, result) {
+            if (err) throw err;
+            // res.json(result);
+            else {
+              res.json(result)
+            }
+            db.close();
+          })
+      }
+    )
+  } catch (error) {
+    console.log(error)
   }
 
 })
